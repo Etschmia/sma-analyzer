@@ -2,11 +2,15 @@
 
 import { NextResponse } from 'next/server';
 
+type ApiProvider = 'alpha-vantage' | 'finnhub';
+
 interface RequestBody {
   symbol: string;
   shortSMA: number;
   longSMA: number;
   days: number;
+  apiProvider: ApiProvider;
+  apiKey?: string;
 }
 
 // Typen für unsere sauberen, verarbeiteten Daten
@@ -27,53 +31,82 @@ export interface AnalysisResult {
   crossoverEvents: CrossoverEvent[];
 }
 
+async function fetchAlphaVantageData(symbol: string, apiKey: string): Promise<{ date: string, close: number }[]> {
+  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${apiKey}`;
+
+  const apiResponse = await fetch(url);
+  if (!apiResponse.ok) {
+    throw new Error(`Alpha Vantage API request failed with status ${apiResponse.status}`);
+  }
+  const rawData = await apiResponse.json();
+
+  if (rawData['Error Message'] || !rawData['Time Series (Daily)']) {
+    throw new Error(rawData['Note'] || rawData['Error Message'] || 'Invalid data received from Alpha Vantage API. Check the stock symbol or API key.');
+  }
+
+  const timeSeries = rawData['Time Series (Daily)'] as Record<string, { '4. close': string }>;
+  return Object.entries(timeSeries)
+    .map(([date, values]) => ({
+      date,
+      close: parseFloat(values['4. close']),
+    }))
+    .reverse();
+}
+
+async function fetchFinnhubData(symbol: string, apiKey: string): Promise<{ date: string, close: number }[]> {
+  const to = Math.floor(Date.now() / 1000);
+  const from = to - (365 * 2 * 24 * 60 * 60); // Fetch 2 years of data to have enough for SMA calculation
+
+  const url = `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${from}&to=${to}&token=${apiKey}`;
+
+  const apiResponse = await fetch(url);
+  if (!apiResponse.ok) {
+    throw new Error(`Finnhub API request failed with status ${apiResponse.status}`);
+  }
+  const rawData = await apiResponse.json();
+
+  if (rawData.s !== 'ok') {
+    throw new Error(rawData.errmsg || 'Invalid data received from Finnhub API. Check the stock symbol or API key.');
+  }
+
+  return rawData.t.map((timestamp: number, index: number) => ({
+    date: new Date(timestamp * 1000).toISOString().split('T')[0],
+    close: rawData.c[index],
+  }));
+}
 
 export async function POST(request: Request) {
   try {
     const body: RequestBody = await request.json();
-    
-    const { symbol, shortSMA, longSMA, days } = body;
+    const { symbol, shortSMA, longSMA, days, apiProvider, apiKey: clientApiKey } = body;
 
-    if (!symbol || !shortSMA || !longSMA || !days) {
+    if (!symbol || !shortSMA || !longSMA || !days || !apiProvider) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+    let apiKey: string | undefined;
+    if (apiProvider === 'alpha-vantage') {
+      apiKey = clientApiKey || process.env.ALPHA_VANTAGE_API_KEY;
+    } else if (apiProvider === 'finnhub') {
+      apiKey = clientApiKey || process.env.FINNHUB_API_KEY;
+    }
+
     if (!apiKey) {
-      return NextResponse.json({ error: 'API key is not configured' }, { status: 500 });
+      return NextResponse.json({ error: `API key for ${apiProvider} is not configured` }, { status: 500 });
     }
 
-    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${apiKey}`;
-    
-    const apiResponse = await fetch(url);
-    if (!apiResponse.ok) {
-      throw new Error(`Alpha Vantage API request failed with status ${apiResponse.status}`);
-    }
-    const rawData = await apiResponse.json();
-    console.log('Antwort von Alpha Vantage:', rawData);
-    
-    if (rawData['Error Message'] || !rawData['Time Series (Daily)']) {
-      throw new Error(rawData['Error Message'] || 'Invalid data received from API. Check the stock symbol.');
+    let dailyData: { date: string, close: number }[];
+
+    if (apiProvider === 'alpha-vantage') {
+      dailyData = await fetchAlphaVantageData(symbol, apiKey);
+    } else if (apiProvider === 'finnhub') {
+      dailyData = await fetchFinnhubData(symbol, apiKey);
+    } else {
+      return NextResponse.json({ error: 'Invalid API provider' }, { status: 400 });
     }
 
-    // --- AB HIER STARTET DIE NEUE BERECHNUNGSLOGIK ---
-
-    // 1. Rohdaten in ein sauberes, chronologisches Array umwandeln
-    const timeSeries = rawData['Time Series (Daily)'];
-    const dailyData = Object.entries(timeSeries)
-      .map(([date, values]: [string, any]) => ({
-        date,
-        close: parseFloat(values['4. close']),
-      }))
-      .reverse(); // Wichtig: API liefert antichronologisch, wir drehen es um
-
-    // 2. SMAs berechnen
     const dataWithSMAs = calculateSMAs(dailyData, shortSMA, longSMA);
-
-    // 3. Crossovers identifizieren
     const crossoverEvents = findCrossovers(dataWithSMAs);
-    
-    // 4. Daten auf den gewünschten Zeitraum zuschneiden
     const slicedChartData = dataWithSMAs.slice(-days);
 
     const result: AnalysisResult = {
