@@ -1,48 +1,76 @@
-// app/components/SettingsPanel.tsx
+// src/app/components/SettingsPanel.tsx
 
-'use client'; // Wichtig: Macht dies zu einer Client-Komponente
+'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-// Definiere die Symbole und ihre Ticker für die Auswahl
 const indices = [
   { name: 'DAX', symbol: '^GDAXI' },
   { name: 'Euro Stoxx 50', symbol: '^STOXX50E' },
-  { name: 'NASDAQ 100', symbol: 'QQQ' }, // ETF ist oft einfacher abzufragen
-  { name: 'S&P 500', symbol: 'SPY' },   // ETF ist oft einfacher abzufragen
+  { name: 'NASDAQ 100', symbol: 'QQQ' },
+  { name: 'S&P 500', symbol: 'SPY' },
   { name: 'Nikkei 225', symbol: '^N225' },
 ];
 
+interface Settings {
+  symbol: string;
+  shortSMA: number;
+  longSMA: number;
+  days: number;
+}
+
+const defaultSettings: Settings = {
+  symbol: indices[0].symbol,
+  shortSMA: 190,
+  longSMA: 212,
+  days: 365,
+};
+
 export default function SettingsPanel() {
-  // States für die einzelnen Eingabefelder mit Standardwerten
-  const [shortSMA, setShortSMA] = useState(190);
-  const [longSMA, setLongSMA] = useState(212);
-  const [days, setDays] = useState(365);
-  const [selectedIndex, setSelectedIndex] = useState(indices[0].symbol);
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+
+  // Lädt die Daten einmalig vom Client
+  useEffect(() => {
+    try {
+      const savedSettings = localStorage.getItem('smaAnalyzerSettings');
+      if (savedSettings) {
+        setSettings({ ...defaultSettings, ...JSON.parse(savedSettings) });
+      }
+    } catch (error) {
+      console.error("Fehler beim Laden der Einstellungen:", error);
+    }
+  }, []);
+
+  // Speichert die Daten bei jeder Änderung
+  useEffect(() => {
+    try {
+      localStorage.setItem('smaAnalyzerSettings', JSON.stringify(settings));
+    } catch (error) {
+      console.error("Fehler beim Speichern der Einstellungen:", error);
+    }
+  }, [settings]);
 
   const handleAnalyse = () => {
-    // Diese Funktion wird später die Analyse starten
-    console.log({
-      symbol: selectedIndex,
-      shortSMA,
-      longSMA,
-      days,
-    });
+    console.log("Analyse gestartet mit:", settings);
+  };
+
+  const updateSetting = (key: keyof Settings, value: string | number) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
   };
 
   return (
     <div className="p-6 bg-gray-100 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">Einstellungen</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">Einstellungen</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-
-        {/* Index Auswahl */}
+        
         <div className="flex flex-col">
           <label htmlFor="index" className="mb-1 font-semibold text-gray-700">Index</label>
           <select
             id="index"
-            value={selectedIndex}
-            onChange={(e) => setSelectedIndex(e.target.value)}
-            className="p-2 border border-gray-300 rounded-md"
+            value={settings.symbol}
+            onChange={(e) => updateSetting('symbol', e.target.value)}
+            // KORREKTUR HINZUGEFÜGT
+            className="p-2 border border-gray-300 rounded-md text-gray-900"
           >
             {indices.map((index) => (
               <option key={index.symbol} value={index.symbol}>
@@ -52,43 +80,42 @@ export default function SettingsPanel() {
           </select>
         </div>
 
-        {/* Kurzer SMA */}
         <div className="flex flex-col">
           <label htmlFor="shortSMA" className="mb-1 font-semibold text-gray-700">Kurzer SMA</label>
           <input
             type="number"
             id="shortSMA"
-            value={shortSMA}
-            onChange={(e) => setShortSMA(Number(e.target.value))}
-            className="p-2 border border-gray-300 rounded-md"
+            value={settings.shortSMA}
+            onChange={(e) => updateSetting('shortSMA', Number(e.target.value))}
+            // KORREKTUR HINZUGEFÜGT
+            className="p-2 border border-gray-300 rounded-md text-gray-900"
           />
         </div>
 
-        {/* Langer SMA */}
         <div className="flex flex-col">
           <label htmlFor="longSMA" className="mb-1 font-semibold text-gray-700">Langer SMA</label>
           <input
             type="number"
             id="longSMA"
-            value={longSMA}
-            onChange={(e) => setLongSMA(Number(e.target.value))}
-            className="p-2 border border-gray-300 rounded-md"
+            value={settings.longSMA}
+            onChange={(e) => updateSetting('longSMA', Number(e.target.value))}
+            // KORREKTUR HINZUGEFÜGT
+            className="p-2 border border-gray-300 rounded-md text-gray-900"
           />
         </div>
 
-        {/* Zeitraum */}
         <div className="flex flex-col">
           <label htmlFor="days" className="mb-1 font-semibold text-gray-700">Zeitraum (Tage)</label>
           <input
             type="number"
             id="days"
-            value={days}
-            onChange={(e) => setDays(Number(e.target.value))}
-            className="p-2 border border-gray-300 rounded-md"
+            value={settings.days}
+            onChange={(e) => updateSetting('days', Number(e.target.value))}
+            // KORREKTUR HINZUGEFÜGT
+            className="p-2 border border-gray-300 rounded-md text-gray-900"
           />
         </div>
 
-        {/* Button */}
         <div className="flex items-end">
             <button
             onClick={handleAnalyse}
