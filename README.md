@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SMA Crossover Analyzer 📈
+
+This web application provides a tool to backtest and visualize the Simple Moving Average (SMA) Crossover strategy for various financial indices. The project is inspired by an interview with Oliver Baron in "ideas-magazin.de", where an AI-optimized strategy using 190- and 212-day SMAs on the DAX was discussed.
+
+This tool allows users to configure their own SMA periods, select from major world indices, and analyze historical performance and crossover events.
+
+
+
+## Features
+
+* **Custom SMA Periods:** Set any two SMA lengths (e.g., 50 vs. 200) to test different strategies.
+* **Selectable Indices:** Analyze major indices by using their corresponding ETFs (e.g., DAX, S&P 500, NASDAQ 100).
+* **Variable Timeframes:** Choose the historical lookback period in days.
+* **Interactive Charting:** Visualizes the closing price, both SMA lines, and bullish/bearish crossover events directly on the chart.
+* **Persistent Settings:** Your chosen settings are saved in the browser, so they're remembered on your next visit.
+
+## Technology Stack
+
+This project is built with a modern, full-stack TypeScript approach:
+
+* **Framework:** [Next.js](https://nextjs.org/) (with App Router)
+* **Library:** [React](https://reactjs.org/)
+* **Language:** [TypeScript](https://www.typescriptlang.org/)
+* **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+* **Charting:** [Chart.js](https://www.chartjs.org/) with `react-chartjs-2`
+* **Financial Data API:** [Alpha Vantage](https://www.alphavantage.co/)
 
 ## Getting Started
 
-First, run the development server:
+To get a local copy up and running, follow these simple steps.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Prerequisites
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+You need to have [Node.js](https://nodejs.org/) (version 18 or later) and npm installed on your machine.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Installation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://your-repository-url.com/sma-analyzer.git](https://your-repository-url.com/sma-analyzer.git)
+    cd sma-analyzer
+    ```
 
-## Learn More
+2.  **Install NPM packages:**
+    ```bash
+    npm install
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+3.  **Set up your Environment Variables:**
+    This project requires an API key from Alpha Vantage to fetch financial data.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+    * Get a free API key at [https://www.alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key).
+    * Create a file named `.env.local` in the root of the project.
+    * Add your API key to the file like this:
+        ```
+        ALPHA_VANTAGE_API_KEY=YOUR_API_KEY_HERE
+        ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4.  **Run the Development Server:**
+    ```bash
+    npm run dev
+    ```
 
-## Deploy on Vercel
+    Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
